@@ -4,6 +4,17 @@ extract_prompt_fmt = "Q:{question}\nA:{rationale}\nThe answer to the original qu
 ans_template_str = "Prompt with Question:\n\n{{question}}\n\n--------------------\n\nProblem-solving Process:\n\n{{rationale}}\n\n--------------------\n\nFinal Answer\n\n{{answer}}"
 
 
+def check_prompt(prompt: str):
+    if len(prompt) > 1024:
+        print("Invalid prompt (too long, >1024 tokens)")
+        return False
+    elif "{{question}}" not in prompt:
+        prompt_ex = "You need to put a placeholder {{question}} in your prompt."
+        print(prompt_ex)
+        return False
+    return True
+
+
 def clean_commas(text):
     # This function finds all numeric sequences that could include commas, decimal points, or be part of a float,
     # and then decides whether to remove commas based on the context.

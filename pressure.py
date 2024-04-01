@@ -7,18 +7,28 @@ import google.generativeai as genai
 from tqdm import tqdm
 import jinja2
 import pickle
+from random import shuffle
+
+# read prompt from prompt.txt
+with open("./prompt.txt", "r") as f:
+    prompt_template = f.read()
+assert check_prompt(prompt_template)
+
+environment = jinja2.Environment()
+prompt_template = environment.from_string(prompt_template)
+ans_template = environment.from_string(ans_template_str)
 
 trial_num = 3
 assert trial_num % 2 == 1, "Trial number should be odd"
-test_num = 15
+test_num = 30
 assert 0 < test_num <= test_num, "Invalid test number"
 questions = questions[:test_num]
 
-request_delay = 0  # not useful
+request_delay = 0.2  # best case can be 0
 failed_delay = 2  # per question
 
-environment = jinja2.Environment()
-ans_template = environment.from_string(ans_template_str)
+# primitive key balancing
+shuffle(api_keys)
 
 
 async def process_question(q: str, model: genai.GenerativeModel, n: int) -> str:
@@ -42,11 +52,13 @@ async def trial() -> tuple[list[list[str]], list[list[str]]]:
 
         genai.configure(api_key=api_keys[i])
         model = genai.GenerativeModel("gemini-pro")
-        cnt = 1
+        cnt = 0
         while failed:
             jobs = asyncio.gather(
                 *[
-                    process_question(questions[j], model, n)
+                    process_question(
+                        prompt_template.render(question=questions[j]), model, n
+                    )
                     for n, j in enumerate(failed)
                 ]
             )
@@ -59,13 +71,30 @@ async def trial() -> tuple[list[list[str]], list[list[str]]]:
                     new_failed.append(j)
                 else:
                     rationales[j] = r
-            failed = new_failed
 
-            if failed:
-                print(f"Failed to generate content for {len(failed)} questions.")
-                sleep_time = len(failed) * failed_delay
-                print(f"sleep {sleep_time}")
-                time.sleep(sleep_time)
+            if new_failed:
+                print(f"Failed to generate content for {len(new_failed)} questions.")
+                pre_cnt, cur_cnt = len(failed), len(new_failed)
+                failed = new_failed
+
+                cnt += 1
+                if cnt > 2 and pre_cnt == cur_cnt:
+                    cnt = 0
+                    print(f"key {i} dead, swapping")
+                    cur_i, nxt_i = i, (i + 1) % trial_num
+                    api_keys[cur_i], api_keys[nxt_i] = (
+                        api_keys[nxt_i],
+                        api_keys[cur_i],
+                    )
+                    genai.configure(api_key=api_keys[i])
+                    model = genai.GenerativeModel("gemini-pro")
+                else:
+                    sleep_time = len(failed) * failed_delay
+                    print(f"sleep {sleep_time}")
+                    time.sleep(sleep_time)
+            else:  # no failed
+                break
+
         rationale_tests.append(rationales)
 
     for i in range(trial_num):
@@ -98,13 +127,29 @@ async def trial() -> tuple[list[list[str]], list[list[str]]]:
                     new_failed.append(j)
                 else:
                     answers[j] = r
-            failed = new_failed
 
-            if failed:
-                print(f"Failed to extract answer for {len(failed)} questions.")
-                sleep_time = len(failed) * failed_delay
-                print(f"sleep {sleep_time}")
-                time.sleep(sleep_time)
+            if new_failed:
+                print(f"Failed to extract answer for {len(new_failed)} questions.")
+                pre_cnt, cur_cnt = len(failed), len(new_failed)
+                failed = new_failed
+
+                cnt += 1
+                if cnt > 2 and pre_cnt == cur_cnt:
+                    cnt = 0
+                    print(f"key {i} dead, swapping")
+                    cur_i, nxt_i = i, (i + 1) % trial_num
+                    api_keys[cur_i], api_keys[nxt_i] = (
+                        api_keys[nxt_i],
+                        api_keys[cur_i],
+                    )
+                    genai.configure(api_key=api_keys[i])
+                    model = genai.GenerativeModel("gemini-pro")
+                else:
+                    sleep_time = len(failed) * failed_delay
+                    print(f"sleep {sleep_time}")
+                    time.sleep(sleep_time)
+            else:  # no failed
+                break
 
         answer_tests.append(answers)
     return rationale_tests, answer_tests
@@ -145,7 +190,7 @@ for i in range(trial_num):
 
         test_res += f"Trial {i + 1}\n\n"
         test_res += f"Question {j + 1}:\n" + "-" * 20
-        test_res += f"""\n\n{ans_template.render(question=question, rationale=rationale, answer=answer)}\n"""
+        test_res += f"""\n\n{ans_template.render(question=prompt_template.render(question=question), rationale=rationale, answer=answer)}\n"""
         test_res += "\n" + "<" * 6 + "=" * 30 + ">" * 6 + "\n\n"
         res_list.append(test_res)
 
@@ -167,4 +212,6 @@ print("\n" + "=" * 20 + "\n")
 print(res_stats_str)
 pickle.dump((trials, res_list, res_stats_str), open("result.pkl", "wb"))
 
-print(f"Time taken to generate content: {end_time - start_time} seconds")
+print(
+    f"Time taken for {test_num} {'questions' if test_num>1 else 'question' }: {end_time - start_time} seconds"
+)
