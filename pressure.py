@@ -14,48 +14,17 @@ test_num = 15
 assert 0 < test_num <= test_num, "Invalid test number"
 questions = questions[:test_num]
 
-request_delay = 0.5  # 0.5 for jammed
-failed_delay = 2
+request_delay = 0  # not useful
+failed_delay = 2  # per question
 
 environment = jinja2.Environment()
 ans_template = environment.from_string(ans_template_str)
 
-# environment = jinja2.Environment()
-# template = environment.from_string(prompt)
-# prompt_ex = f"""{template.render(question=questions[Example_Number - 1])}"""
 
-
-# TODO: Enter your Gemini API key
-# @title Set your Gemini API Key.
-# GOOGLE_API_KEY = ""  # @param {type:"string"}
-# genai.configure(api_key=GOOGLE_API_KEY)
-
-
-# not working
-
-# from google.ai import generativelanguage as glm
-
-# clients = [
-#   glm.GenerativeServiceClient(client_options={"api_key": key}) for key in api_keys
-# ]
-# model._client = glm.GenerativeServiceClient(
-#     client_options={"api_key": ""}
-# )
-
-
-# for client in clients:
-#    model._client = client
-#
-#    response = model.generate_content("What is the meaning of life?")
-#    print(model._client)
-#    print(response)
-#    print(response.text)  # Model response gets printed
-
-
-async def process_question(q: str, model, n: int) -> str:
+async def process_question(q: str, model: genai.GenerativeModel, n: int) -> str:
     try:
         await asyncio.sleep(n * request_delay)
-        print(f"{n} sent")
+        # print(f"{n} sent")
         r = await model.generate_content_async(q)
         return r.text
     except:
@@ -146,10 +115,6 @@ rationale_tests, answer_tests = asyncio.run(trial())
 end_time = time.time()
 
 
-# cleaned_answer_tests = [
-#    [clean_commas(ans) for ans in answers] for answers in answer_tests
-# ]
-
 # results to display
 trials = [0] * test_num
 res_list = []
@@ -177,9 +142,6 @@ for i in range(trial_num):
         if find_and_match_floats(cleaned_result, answers[j]) or j in [0, 26]:
             trials[j] += 1
             accurate_count += 1
-            # trials[i].append(1)
-        # else:
-        #    trials[i].append(0)
 
         test_res += f"Trial {i + 1}\n\n"
         test_res += f"Question {j + 1}:\n" + "-" * 20
@@ -199,9 +161,9 @@ res_stats_str += (
 
 for res in res_list:
     print(res)
-print("=" * 20)
+print("\n" + "=" * 20 + "\n")
 print(f"{trials=}")
-print("=" * 20)
+print("\n" + "=" * 20 + "\n")
 print(res_stats_str)
 pickle.dump((trials, res_list, res_stats_str), open("result.pkl", "wb"))
 
