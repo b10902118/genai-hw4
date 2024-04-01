@@ -28,6 +28,7 @@ keys = key_manager(api_keys)
 
 
 async def process_question(q: str, model: genai.GenerativeModel, n: int) -> str:
+    # r = None
     try:
         await asyncio.sleep(n * request_delay)
         # print(f"{n} sent")
@@ -37,11 +38,15 @@ async def process_question(q: str, model: genai.GenerativeModel, n: int) -> str:
         # print(r._result)
         # print(r.status_code)
         return r.text
-    except:
-        try:
-            print(r._result)
-        except Exception as e:
-            print(e)
+    except Exception as ex:
+        s = str(ex)
+        if "429" not in s and "The `response.text` quick accessor" not in s:
+            print(ex)  # special case
+
+        # try:
+        # print(r.__dict__)
+        # except Exception as e:
+        # print(r, e)
         return None
 
 
@@ -69,7 +74,7 @@ async def test_all_once(contents: list[str]):
                 resps[i] = r
 
         if new_failed:
-            print(f"Failed to generate content for {len(new_failed)} questions.")
+            print(f"Failed {len(new_failed)} questions.")
             pre_cnt, cur_cnt = len(failed), len(new_failed)
             failed = new_failed
 
@@ -119,7 +124,7 @@ end_time = time.time()
 
 # results to display
 trials = [[0] * test_num for _ in range(trial_num)]
-res_list = []
+res_list = [[] for _ in range(trial_num)]
 res_stats_str = ""
 
 for i in range(trial_num):
@@ -149,7 +154,7 @@ for i in range(trial_num):
         test_res += f"Question {j + 1}:\n" + "-" * 20
         test_res += f"""\n\n{ans_template.render(question=prompt_template.render(question=question), rationale=rationale, answer=answer)}\n"""
         test_res += "\n" + "<" * 6 + "=" * 30 + ">" * 6 + "\n\n"
-        res_list.append(test_res)
+        res_list[i].append(test_res)  # old is 1d list
 
         # time.sleep(1)
 
@@ -164,7 +169,8 @@ res_stats_str += (
 
 print("\n" + "=" * 20 + "\n")
 for res in res_list:
-    print(res)
+    for r in res:
+        print(r)
 print("\n" + "=" * 20 + "\n")
 
 for i, trial in enumerate(trials):
