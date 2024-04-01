@@ -8,14 +8,15 @@ from tqdm import tqdm
 import jinja2
 import pickle
 from random import shuffle
+from datetime import datetime
 
 # read prompt from prompt.txt
 with open("./prompt.txt", "r") as f:
-    prompt_template = f.read()
-assert check_prompt(prompt_template)
+    prompt_template_str = f.read()
+assert check_prompt(prompt_template_str)
 
 environment = jinja2.Environment()
-prompt_template = environment.from_string(prompt_template)
+prompt_template = environment.from_string(prompt_template_str)
 ans_template = environment.from_string(ans_template_str)
 
 trial_num = 3
@@ -161,7 +162,7 @@ end_time = time.time()
 
 
 # results to display
-trials = [0] * test_num
+trials = [[0] * test_num for _ in range(trial_num)]
 res_list = []
 res_stats_str = ""
 
@@ -185,7 +186,7 @@ for i in range(trial_num):
         cleaned_result = clean_commas(answer_tests[i][j])
         # Q0, Q26 are not validated
         if find_and_match_floats(cleaned_result, answers[j]) or j in [0, 26]:
-            trials[j] += 1
+            trials[i][j] = 1
             accurate_count += 1
 
         test_res += f"Trial {i + 1}\n\n"
@@ -200,17 +201,24 @@ for i in range(trial_num):
     res_stats_str += f"Trial {i + 1}, accurate_count: {accurate_count}, total_count: {test_num}, accuracy: {accurate_count/ test_num * 100}%\n"
 
 maj = trial_num // 2 + 1
+sum_list = [sum(values) for values in zip(*trials)]
 res_stats_str += (
-    f"Final Accuracy: { sum(1 for num in trials if num > maj) / test_num * 100}%"
+    f"Final Accuracy: { sum(1 for n in sum_list if n > maj) / test_num * 100}%"
 )
 
 for res in res_list:
     print(res)
 print("\n" + "=" * 20 + "\n")
-print(f"{trials=}")
+
+for i, trial in enumerate(trials):
+    print(f"{i}:", trial)
+
 print("\n" + "=" * 20 + "\n")
 print(res_stats_str)
-pickle.dump((trials, res_list, res_stats_str), open("result.pkl", "wb"))
+pickle.dump(
+    (prompt_template_str, trials, res_list, res_stats_str),
+    open("result" + datetime.now().strftime("-%m-%d-%H-%M") + ".pkl", "wb"),
+)
 
 print(
     f"Time taken for {test_num} {'questions' if test_num>1 else 'question' }: {end_time - start_time} seconds"
