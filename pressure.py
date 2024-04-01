@@ -7,7 +7,7 @@ import google.generativeai as genai
 from tqdm import tqdm
 import jinja2
 import pickle
-from random import shuffle
+from random import shuffle, randint
 from datetime import datetime
 
 # read prompt from prompt.txt
@@ -30,6 +30,7 @@ failed_delay = 2  # per question
 
 # primitive key balancing
 shuffle(api_keys)
+key_n = len(api_keys)
 
 
 async def process_question(q: str, model: genai.GenerativeModel, n: int) -> str:
@@ -81,11 +82,11 @@ async def trial() -> tuple[list[list[str]], list[list[str]]]:
                 cnt += 1
                 if cnt > 2 and pre_cnt == cur_cnt:
                     cnt = 0
-                    print(f"key {i} dead, swapping")
-                    cur_i, nxt_i = i, (i + 1) % trial_num
-                    api_keys[cur_i], api_keys[nxt_i] = (
+                    nxt_i = (i + randint(1, key_n - 2)) % trial_num
+                    print(f"key {i} dead, swapping with {nxt_i}")
+                    api_keys[i], api_keys[nxt_i] = (
                         api_keys[nxt_i],
-                        api_keys[cur_i],
+                        api_keys[i],
                     )
                     genai.configure(api_key=api_keys[i])
                     model = genai.GenerativeModel("gemini-pro")
@@ -137,11 +138,11 @@ async def trial() -> tuple[list[list[str]], list[list[str]]]:
                 cnt += 1
                 if cnt > 2 and pre_cnt == cur_cnt:
                     cnt = 0
-                    print(f"key {i} dead, swapping")
-                    cur_i, nxt_i = i, (i + 1) % trial_num
-                    api_keys[cur_i], api_keys[nxt_i] = (
+                    nxt_i = (i + randint(1, key_n - 2)) % trial_num
+                    print(f"key {i} dead, swapping with {nxt_i}")
+                    api_keys[i], api_keys[nxt_i] = (
                         api_keys[nxt_i],
-                        api_keys[cur_i],
+                        api_keys[i],
                     )
                     genai.configure(api_key=api_keys[i])
                     model = genai.GenerativeModel("gemini-pro")
@@ -206,6 +207,7 @@ res_stats_str += (
     f"Final Accuracy: { sum(1 for n in sum_list if n > maj) / test_num * 100}%"
 )
 
+print("\n" + "=" * 20 + "\n")
 for res in res_list:
     print(res)
 print("\n" + "=" * 20 + "\n")
@@ -215,6 +217,8 @@ for i, trial in enumerate(trials):
 
 print("\n" + "=" * 20 + "\n")
 print(res_stats_str)
+
+# TODO display results with another interface
 pickle.dump(
     (prompt_template_str, trials, res_list, res_stats_str),
     open("result" + datetime.now().strftime("-%m-%d-%H-%M") + ".pkl", "wb"),
