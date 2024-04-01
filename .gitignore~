@@ -4,4 +4,3 @@ __pycache__/
 hw4.ipynb
 *.pkl
 prompt.txt
-param.py

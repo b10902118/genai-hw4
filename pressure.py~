@@ -22,9 +22,11 @@ ans_template = environment.from_string(ans_template_str)
 from param import *
 
 questions = questions[:test_num]
-
+print(api_keys)
 # key balancing with last use (in utils.py)
 keys = key_manager(api_keys)
+
+exit()
 
 
 async def process_question(q: str, model: genai.GenerativeModel, n: int) -> str:

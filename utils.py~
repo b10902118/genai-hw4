@@ -15,8 +15,7 @@ class key_profile:
 
 class key_manager:
     def __init__(self, api_keys: list):
-        self.keys = [key_profile(k) for k in api_keys]
-        shuffle(self.keys)
+        self.keys = shuffle([key_profile(k) for k in api_keys])
         self.size = len(self.keys)
         self.cur_i = 0
 
