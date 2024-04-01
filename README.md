@@ -15,6 +15,8 @@ api_keys = [
 ]
 ```
 
+`prompt.txt` should contain your prompt
+
 ## Note
 There seem to be other limits for api use, so it is possible to find one key dead even after pausing for a minute. 
 Adapted from genai hw4. Big thanks to the TAs.
