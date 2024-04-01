@@ -32,7 +32,7 @@ Time taken for 30 questions: 208.38231706619263 seconds
 ```
 
 ## Setup
-`secret.py` should contain at least 3 API keys from different google account:
+`secret.py` should contain at least 3 API keys from different google accounts:
 ```python
 api_keys = [
     "key1",
