@@ -1,5 +1,8 @@
 import re
 
+extract_prompt_fmt = "Q:{question}\nA:{rationale}\nThe answer to the original question is (a number only): "
+ans_template_str = "Prompt with Question:\n\n{{question}}\n\n--------------------\n\nProblem-solving Process:\n\n{{rationale}}\n\n--------------------\n\nFinal Answer\n\n{{answer}}"
+
 
 def clean_commas(text):
     # This function finds all numeric sequences that could include commas, decimal points, or be part of a float,

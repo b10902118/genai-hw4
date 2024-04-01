@@ -2,3 +2,4 @@ secret.py
 .vscode-server/
 __pycache__/
 hw4.ipynb
+*.pkl
