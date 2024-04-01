@@ -4,8 +4,35 @@ Currently only CLI version
 python pressure.py
 ```
 
+sample output
+```
+Trial 1
+Rationale
+use key 0
+Extract
+use key 1
+Trial 2
+Rationale
+use key 2
+====================
+... (interaction log)
+====================
+
+0: [1, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+1: [1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]
+2: [1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]
+
+====================
+
+Trial 1, accurate_count: 23, total_count: 30, accuracy: 76.66666666666667%
+Trial 2, accurate_count: 23, total_count: 30, accuracy: 76.66666666666667%
+Trial 3, accurate_count: 22, total_count: 30, accuracy: 73.33333333333333%
+Final Accuracy: 70.0%
+Time taken for 30 questions: 208.38231706619263 seconds
+```
+
 ## Setup
-`secret.py` should contain at least 3 API keys from different google account:
+`secret.py` should contain at least 3 API keys from different google accounts:
 ```python
 api_keys = [
     "key1",
