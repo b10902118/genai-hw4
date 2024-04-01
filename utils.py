@@ -1,6 +1,46 @@
+import time
+from random import shuffle
+
+
+class key_profile:
+    def __init__(self, api_key):
+        self.api_key = api_key
+        # self.cnt = 0
+        self.last_use = 0.0
+        self.dead = False
+
+    # def __lt__(self, other):
+    #    return self.last_use < other.last_use
+
+
+class key_manager:
+    def __init__(self, api_keys: list):
+        self.keys = shuffle([key_profile(k) for k in api_keys])
+        self.size = len(self.keys)
+        self.cur_i = 0
+
+    def newest_key(self, dead=False) -> str:
+        if dead:
+            self.keys[self.cur_i].dead = True
+        # check if all used
+        if False not in [k.dead for k in self.keys]:
+            print("Warning: all keys have died")
+
+        for i in range(self.size):
+            if self.keys[i].last_use < self.keys[self.cur_i].last_use:
+                self.cur_i = i
+
+        self.keys[self.cur_i].last_use = time.time()
+        print(f"use key {self.cur_i}")
+        return self.keys[self.cur_i].api_key
+
+    # def __getitem__(self, i):
+    #    return self.keys[i].api_key
+
+
 import re
 
-extract_prompt_fmt = "Q:{question}\nA:{rationale}\nThe answer to the original question is (a number only): "
+extract_prompt_str = "Q:{{question}}\nA:{{rationale}}\nThe answer to the original question is (a number only): "
 ans_template_str = "Prompt with Question:\n\n{{question}}\n\n--------------------\n\nProblem-solving Process:\n\n{{rationale}}\n\n--------------------\n\nFinal Answer\n\n{{answer}}"
 
 
