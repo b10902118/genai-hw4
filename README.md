@@ -14,6 +14,16 @@ api_keys = [
     #the more the better
 ]
 ```
+`param.py` should contain all the following variables defined:
+```python
+trial_num = 3
+assert trial_num % 2 == 1, "Trial number should be odd"
+test_num = 30
+assert 0 < test_num <= test_num, "Invalid test number"
+
+request_delay = 0.5  # best case can be 0
+failed_delay = 1  # per question
+```
 
 `prompt.txt` should contain your prompt
 
