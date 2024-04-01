@@ -32,8 +32,16 @@ async def process_question(q: str, model: genai.GenerativeModel, n: int) -> str:
         await asyncio.sleep(n * request_delay)
         # print(f"{n} sent")
         r = await model.generate_content_async(q)
+        # print(r.prompt_feedback)
+        # print(r.parts)
+        # print(r._result)
+        # print(r.status_code)
         return r.text
     except:
+        try:
+            print(r._result)
+        except Exception as e:
+            print(e)
         return None
 
 
@@ -44,7 +52,7 @@ async def test_all_once(contents: list[str]):
     resps = [""] * test_num
 
     genai.configure(api_key=keys.newest_key())
-    model = genai.GenerativeModel("gemini-pro")
+    model = genai.GenerativeModel("gemini-pro", safety_settings=safety_settings)
     cnt = 0
     while failed:
         jobs = asyncio.gather(
@@ -70,7 +78,9 @@ async def test_all_once(contents: list[str]):
                 cnt = 0
                 print(f"key died, changing")
                 genai.configure(api_key=keys.newest_key(dead=True))
-                model = genai.GenerativeModel("gemini-pro")
+                model = genai.GenerativeModel(
+                    "gemini-pro", safety_settings=safety_settings
+                )
             else:
                 sleep_time = len(failed) * failed_delay
                 print(f"sleep {sleep_time}")
@@ -149,7 +159,7 @@ for i in range(trial_num):
 maj = trial_num // 2 + 1
 sum_list = [sum(values) for values in zip(*trials)]
 res_stats_str += (
-    f"Final Accuracy: { sum(1 for n in sum_list if n > maj) / test_num * 100}%"
+    f"Final Accuracy: { sum(1 for n in sum_list if n >= maj) / test_num * 100}%"
 )
 
 print("\n" + "=" * 20 + "\n")
@@ -164,10 +174,11 @@ print("\n" + "=" * 20 + "\n")
 print(res_stats_str)
 
 # TODO display results with another interface
-pickle.dump(
-    (prompt_template_str, trials, res_list, res_stats_str),
-    open("result" + datetime.now().strftime("-%m-%d-%H-%M") + ".pkl", "wb"),
-)
+if test_num > 10:  # only save formal tests
+    pickle.dump(
+        (prompt_template_str, trials, res_list, res_stats_str),
+        open("result" + datetime.now().strftime("-%m-%d-%H-%M") + ".pkl", "wb"),
+    )
 
 print(
     f"Time taken for {test_num} {'questions' if test_num>1 else 'question' }: {end_time - start_time} seconds"

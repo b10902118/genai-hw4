@@ -3,6 +3,6 @@ secret.py
 __pycache__/
 hw4.ipynb
 *.pkl
-prompt.txt
+*.txt
 param.py
 *~

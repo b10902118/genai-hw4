@@ -23,9 +23,12 @@ class key_manager:
     def newest_key(self, dead=False) -> str:
         if dead:
             self.keys[self.cur_i].dead = True
-        # check if all used
-        if False not in [k.dead for k in self.keys]:
-            print("Warning: all keys have died")
+            # check if all used
+            if False not in [k.dead for k in self.keys]:
+                print("Warning: all keys have died, sleep 60s")
+                time.sleep(60)
+                for k in self.keys:
+                    k.dead = False
 
         for i in range(self.size):
             if self.keys[i].last_use < self.keys[self.cur_i].last_use:
@@ -39,6 +42,28 @@ class key_manager:
     #    return self.keys[i].api_key
 
 
+safety_settings = [
+    {
+        "category": "HARM_CATEGORY_DANGEROUS",
+        "threshold": "BLOCK_NONE",
+    },
+    {
+        "category": "HARM_CATEGORY_HARASSMENT",
+        "threshold": "BLOCK_NONE",
+    },
+    {
+        "category": "HARM_CATEGORY_HATE_SPEECH",
+        "threshold": "BLOCK_NONE",
+    },
+    {
+        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        "threshold": "BLOCK_NONE",
+    },
+    {
+        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+        "threshold": "BLOCK_NONE",
+    },
+]
 import re
 
 extract_prompt_str = "Q:{{question}}\nA:{{rationale}}\nThe answer to the original question is (a number only): "
