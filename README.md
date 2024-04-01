@@ -1,8 +1,10 @@
+## Usage
 Currently only CLI version
 ```bash
 python pressure.py
 ```
 
+## Setup
 `secret.py` should contain at least 3 API keys from different google account:
 ```python
 api_keys = [
@@ -12,4 +14,7 @@ api_keys = [
     #the more the better
 ]
 ```
+
+## Note
 There seem to be other limits for api use, so it is possible to find one key dead even after pausing for a minute. 
+Adapted from genai hw4. Big thanks to the TAs.
