@@ -26,7 +26,7 @@ class key_manager:
             # check if all used
             if False not in [k.dead for k in self.keys]:
                 print("Warning: all keys have died, sleep 60s")
-                time.sleep(60)
+                time.sleep(60)  # may cause problem to other coroutines
                 for k in self.keys:
                     k.dead = False
         # just round robin (ok in concurrent, but not in parallel)
