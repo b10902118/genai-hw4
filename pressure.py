@@ -124,6 +124,7 @@ async def start_trials() -> tuple[list[list[str]], list[list[str]]]:
     return rationale_tests, answer_tests
 
 
+accuracies = []
 for filename in txt_files:
     with open(filename, "r") as f:
         prompt_template_str = f.read()
@@ -182,9 +183,8 @@ for filename in txt_files:
 
     maj = trial_num // 2 + 1
     sum_list = [sum(values) for values in zip(*trials)]
-    res_stats_str += (
-        f"Final Accuracy: { sum(1 for n in sum_list if n >= maj) / test_num * 100}%"
-    )
+    final_accuracy = sum(1 for n in sum_list if n >= maj) / test_num * 100
+    res_stats_str += f"Final Accuracy: { final_accuracy }%"
 
     # print("\n" + "=" * 20 + "\n")
     # for res in res_list:
@@ -211,7 +211,12 @@ for filename in txt_files:
         print(
             f"Time taken for {test_num} {'questions' if test_num>1 else 'question' }: {end_time - start_time} seconds"
         )
+    else:
+        accuracies.append(f"{filename[len('./to_eval/'):-4]}: {final_accuracy}")
 
     if filename != txt_files[-1]:
         print("\n\n")
         time.sleep(60)  # refresh rate limit
+
+with accuracies and open("accuracy.txt", "w") as f:
+    f.write("\n".join(accuracies))
