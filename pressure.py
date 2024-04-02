@@ -4,18 +4,21 @@ from secret import api_keys
 import time
 import asyncio
 import google.generativeai as genai
-from tqdm import tqdm
 import jinja2
 import pickle
-from datetime import datetime
 
-# read prompt from prompt.txt
-with open("./prompt.txt", "r") as f:
-    prompt_template_str = f.read()
-assert check_prompt(prompt_template_str)
+import os
+import glob
+
+txt_files = glob.glob("./to_eval/*.txt")
+if not txt_files:
+    print("to_eval is empty, use ./prompt.txt as default.")
+    txt_files = ["./prompt.txt"]
+
+print("to_eval:", txt_files)
 
 environment = jinja2.Environment()
-prompt_template = environment.from_string(prompt_template_str)
+prompt_template = None  # instantiate later
 extract_template = environment.from_string(extract_prompt_str)
 ans_template = environment.from_string(ans_template_str)
 
@@ -24,7 +27,7 @@ from param import *
 questions = questions[:test_num]
 
 # key balancing with last use (in utils.py)
-keys = key_manager(api_keys)
+keys: key_manager
 
 
 async def process_question(q: str, model: genai.GenerativeModel, n: int) -> str:
@@ -109,7 +112,7 @@ async def two_stages(contents: list[str], trial_n: int) -> tuple[list[str], list
     return rationales, answers
 
 
-async def trial() -> tuple[list[list[str]], list[list[str]]]:
+async def start_trials() -> tuple[list[list[str]], list[list[str]]]:
     contents = [prompt_template.render(question=q) for q in questions]
 
     results = await asyncio.gather(*[two_stages(contents, i) for i in range(trial_num)])
@@ -118,75 +121,94 @@ async def trial() -> tuple[list[list[str]], list[list[str]]]:
     return rationale_tests, answer_tests
 
 
-start_time = time.time()
-rationale_tests, answer_tests = asyncio.run(trial())
-end_time = time.time()
+for filename in txt_files:
+    with open(filename, "r") as f:
+        prompt_template_str = f.read()
+    if not check_prompt(prompt_template_str):
+        print(f"{filename} is invalid, skip.")
+        continue
+    elif os.path.exists(filename[:-4] + ".pkl"):
+        print(f"{filename} has been evaluated, skip.")
+        continue
 
+    prompt_template = environment.from_string(prompt_template_str)
+    keys = key_manager(api_keys)
 
-# results to display
-trials = [[0] * test_num for _ in range(trial_num)]
-res_list = [[] for _ in range(trial_num)]
-res_stats_str = ""
+    start_time = time.time()
+    rationale_tests, answer_tests = asyncio.run(start_trials())
+    end_time = time.time()
 
-for i in range(trial_num):
-    accurate_count = 0
-    # Iterate over each example in the examples list.
-    for j, (question, rationale, answer) in enumerate(
-        zip(questions, rationale_tests[i], answer_tests[i])
-    ):
-        test_res = ""
-        ## check result['answer'] not None
-        if not answer_tests[i][j]:  # this should not happen
-            print(f"answer_tests[{i}][{j}] is invalid")
-            # trials[i].append(0) # not increase
+    # results to display
+    trials = [[0] * test_num for _ in range(trial_num)]
+    res_list = [[] for _ in range(trial_num)]
+    res_stats_str = ""
 
-            test_res += f"Trial {i+1}\n\n Skip question {j + 1}."
+    for i in range(trial_num):
+        accurate_count = 0
+        # Iterate over each example in the examples list.
+        for j, (question, rationale, answer) in enumerate(
+            zip(questions, rationale_tests[i], answer_tests[i])
+        ):
+            test_res = ""
+            ## check result['answer'] not None
+            if not answer_tests[i][j]:  # this should not happen
+                print(f"answer_tests[{i}][{j}] is invalid")
+                # trials[i].append(0) # not increase
+
+                test_res += f"Trial {i+1}\n\n Skip question {j + 1}."
+                test_res += "\n" + "<" * 6 + "=" * 30 + ">" * 6 + "\n\n"
+                res_list.append(f"Trial {i+1}\n\n Skip question {j + 1}.")
+                continue
+
+            cleaned_result = clean_commas(answer_tests[i][j])
+            # Q0, Q26 are not validated
+            if find_and_match_floats(cleaned_result, answers[j]) or j in [0, 26]:
+                trials[i][j] = 1
+                accurate_count += 1
+
+            test_res += f"Trial {i + 1}\n\n"
+            test_res += f"Question {j + 1}:\n" + "-" * 20
+            test_res += f"""\n\n{ans_template.render(question=prompt_template.render(question=question), rationale=rationale, answer=answer)}\n"""
             test_res += "\n" + "<" * 6 + "=" * 30 + ">" * 6 + "\n\n"
-            res_list.append(f"Trial {i+1}\n\n Skip question {j + 1}.")
-            continue
+            res_list[i].append(test_res)  # old is 1d list
 
-        cleaned_result = clean_commas(answer_tests[i][j])
-        # Q0, Q26 are not validated
-        if find_and_match_floats(cleaned_result, answers[j]) or j in [0, 26]:
-            trials[i][j] = 1
-            accurate_count += 1
+            # time.sleep(1)
 
-        test_res += f"Trial {i + 1}\n\n"
-        test_res += f"Question {j + 1}:\n" + "-" * 20
-        test_res += f"""\n\n{ans_template.render(question=prompt_template.render(question=question), rationale=rationale, answer=answer)}\n"""
-        test_res += "\n" + "<" * 6 + "=" * 30 + ">" * 6 + "\n\n"
-        res_list[i].append(test_res)  # old is 1d list
+        # Print the accuracy statistics.
+        res_stats_str += f"Trial {i + 1}, accurate_count: {accurate_count}, total_count: {test_num}, accuracy: {accurate_count/ test_num * 100}%\n"
 
-        # time.sleep(1)
-
-    # Print the accuracy statistics.
-    res_stats_str += f"Trial {i + 1}, accurate_count: {accurate_count}, total_count: {test_num}, accuracy: {accurate_count/ test_num * 100}%\n"
-
-maj = trial_num // 2 + 1
-sum_list = [sum(values) for values in zip(*trials)]
-res_stats_str += (
-    f"Final Accuracy: { sum(1 for n in sum_list if n >= maj) / test_num * 100}%"
-)
-
-print("\n" + "=" * 20 + "\n")
-for res in res_list:
-    for r in res:
-        print(r)
-print("\n" + "=" * 20 + "\n")
-
-for i, trial in enumerate(trials):
-    print(f"{i}:", trial)
-
-print("\n" + "=" * 20 + "\n")
-print(res_stats_str)
-
-# TODO display results with another interface
-if test_num > 10:  # only save formal tests
-    pickle.dump(
-        (prompt_template_str, trials, res_list, res_stats_str),
-        open("result" + datetime.now().strftime("-%m-%d-%H-%M") + ".pkl", "wb"),
+    maj = trial_num // 2 + 1
+    sum_list = [sum(values) for values in zip(*trials)]
+    res_stats_str += (
+        f"Final Accuracy: { sum(1 for n in sum_list if n >= maj) / test_num * 100}%"
     )
 
-print(
-    f"Time taken for {test_num} {'questions' if test_num>1 else 'question' }: {end_time - start_time} seconds"
-)
+    # print("\n" + "=" * 20 + "\n")
+    # for res in res_list:
+    #    for r in res:
+    #        print(r)
+    # print("\n" + "=" * 20 + "\n")
+    print("\n" + "=" * 20 + "\n")
+    print(filename)
+    for i, trial in enumerate(trials):
+        print(f"{i}:", trial)
+
+    print("\n" + "=" * 20 + "\n")
+    print(res_stats_str)
+
+    # TODO display results with another interface
+    if test_num > 20:  # only save formal tests
+        pickle.dump(
+            (prompt_template_str, trials, res_list, res_stats_str),
+            open(filename[:-4] + ".pkl", "wb"),  # remove .txt
+        )
+        print(f"Saved to {filename[:-4]}.pkl")
+
+    if filename == "./prompt.txt":  # not needed in batch mode
+        print(
+            f"Time taken for {test_num} {'questions' if test_num>1 else 'question' }: {end_time - start_time} seconds"
+        )
+
+    if filename != txt_files[-1]:
+        print("\n\n")
+        time.sleep(60)  # refresh rate limit
