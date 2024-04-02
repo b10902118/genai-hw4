@@ -35,7 +35,10 @@ async def process_question(q: str, model: genai.GenerativeModel, n: int) -> str:
     try:
         await asyncio.sleep(n * request_delay)
         # print(f"{n} sent")
-        r = await model.generate_content_async(q)
+        r = await model.generate_content_async(
+            q,
+            generation_config=genai.types.GenerationConfig(temperature=1.0),
+        )
         # print(r.prompt_feedback)
         # print(r.parts)
         # print(r._result)
