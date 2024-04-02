@@ -27,8 +27,13 @@ request_delay = 0.5  # best case can be 0
 failed_delay = 1  # per question
 ```
 
-`prompt.txt` should contain your prompt
+### Processing
+#### single prompt
+`./prompt.txt` should contain your prompt
+#### multiple prompts (batch)
+put all the prompt files with different names under `./to_eval`
 
 ## Note
-There seem to be other limits for api use, so it is possible to find one key dead even after pausing for a minute. 
+There seem to be other limits for api use, so it is possible to find one key dead even after pausing for a minute.
+
 Adapted from genai hw4. Big thanks to the TAs.
