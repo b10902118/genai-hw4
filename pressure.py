@@ -50,8 +50,9 @@ async def process_question(q: str, model: genai.GenerativeModel, n: int) -> str:
         return None
 
 
-async def test_all_once(contents: list[str]):
+async def test_all_once(contents: list[str], stage: str, trial_n: int) -> list[str]:
     assert len(contents) == test_num, "Invalid contents length"
+    print(f"Trial {trial_n} {stage} Start.")
 
     failed = list(range(test_num))
     resps = [""] * test_num
@@ -74,7 +75,7 @@ async def test_all_once(contents: list[str]):
                 resps[i] = r
 
         if new_failed:
-            print(f"Failed {len(new_failed)} questions.")
+            print(f"Trial {trial_n} {stage} Failed {len(new_failed)} questions.")
             pre_cnt, cur_cnt = len(failed), len(new_failed)
             failed = new_failed
 
@@ -89,30 +90,30 @@ async def test_all_once(contents: list[str]):
             else:
                 sleep_time = len(failed) * failed_delay
                 print(f"sleep {sleep_time}")
-                time.sleep(sleep_time)
+                await asyncio.sleep(sleep_time)
         else:  # no failed
             break
     return resps
 
 
+async def two_stages(contents: list[str], trial_n: int) -> tuple[list[str], list[str]]:
+    rationales = await test_all_once(contents, "Rationale", trial_n)
+    answers = await test_all_once(
+        [
+            extract_template.render(question=q, rationale=rationale)
+            for q, rationale in zip(questions, rationales)
+        ],
+        "Extract",
+        trial_n,
+    )
+    return rationales, answers
+
+
 async def trial() -> tuple[list[list[str]], list[list[str]]]:
-    rationale_tests = []
-    answer_tests = []
-    for i in range(trial_num):
-        print(f"Trial {i+1}")
-        print("Rationale")
-        rationale_test = await test_all_once(
-            [prompt_template.render(question=q) for q in questions]
-        )
-        rationale_tests.append(rationale_test)
-        print("Extract")
-        answer_test = await test_all_once(
-            [
-                extract_template.render(question=q, rationale=rationale)
-                for q, rationale in zip(questions, rationale_test)
-            ]
-        )
-        answer_tests.append(answer_test)
+    contents = [prompt_template.render(question=q) for q in questions]
+
+    results = await asyncio.gather(*[two_stages(contents, i) for i in range(trial_num)])
+    rationale_tests, answer_tests = zip(*results)
 
     return rationale_tests, answer_tests
 
