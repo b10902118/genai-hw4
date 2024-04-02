@@ -28,7 +28,7 @@ failed_delay = 1  # per question
 ```
 
 ### Processing
-#### single prompt
+#### single prompt (testing)
 `./prompt.txt` should contain your prompt
 #### multiple prompts (batch)
 put all the prompt files with different names under `./to_eval`
