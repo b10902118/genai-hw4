@@ -6,7 +6,7 @@ class key_profile:
     def __init__(self, api_key):
         self.api_key = api_key
         # self.cnt = 0
-        self.last_use = 0.0
+        # self.last_use = 0.0
         self.dead = False
 
     # def __lt__(self, other):
@@ -16,9 +16,9 @@ class key_profile:
 class key_manager:
     def __init__(self, api_keys: list):
         self.keys = [key_profile(k) for k in api_keys]
-        shuffle(self.keys)
+        shuffle(self.keys)  # prevent from keeping testing with the first key
         self.size = len(self.keys)
-        self.cur_i = 0
+        self.cur_i = -1
 
     def newest_key(self, dead=False) -> str:
         if dead:
@@ -29,13 +29,15 @@ class key_manager:
                 time.sleep(60)
                 for k in self.keys:
                     k.dead = False
+        # just round robin (ok in concurrent, but not in parallel)
+        self.cur_i = (self.cur_i + 1) % self.size
 
-        for i in range(self.size):
-            if self.keys[i].last_use < self.keys[self.cur_i].last_use:
-                self.cur_i = i
+        # for i in range(self.size):
+        #    if self.keys[i].last_use < self.keys[self.cur_i].last_use:
+        #        self.cur_i = i
 
-        self.keys[self.cur_i].last_use = time.time()
-        print(f"use key {self.cur_i}")
+        # self.keys[self.cur_i].last_use = time.time()
+        # print(f"use key {self.cur_i}")
         return self.keys[self.cur_i].api_key
 
     # def __getitem__(self, i):
