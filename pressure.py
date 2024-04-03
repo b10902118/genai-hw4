@@ -218,5 +218,5 @@ for filename in txt_files:
         print("\n\n")
         time.sleep(60)  # refresh rate limit
 
-with accuracies and open("accuracy.txt", "w") as f:
+with accuracies and open("./to_eval/accuracy.txt", "w") as f:
     f.write("\n".join(accuracies))

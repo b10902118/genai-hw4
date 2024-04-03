@@ -5,7 +5,7 @@ import glob
 hard_cnt = [0] * 30
 
 data = []
-for folder in ["./test1", "./test2", "./test3"]:
+for folder in [str(dir) for dir in range(10)]:
     pkl_files = glob.glob(folder + "/*.pkl")
     for filename in pkl_files:
         prompt_template_str, trials, res_list, res_stats_str = pickle.load(
@@ -22,7 +22,7 @@ for folder in ["./test1", "./test2", "./test3"]:
             ]
         data.append(
             (
-                filename,
+                filename[2:-4],
                 prompt_template_str,
                 trials,
                 res_list,
@@ -30,9 +30,42 @@ for folder in ["./test1", "./test2", "./test3"]:
             )
         )
 
-data = sorted(data, key=lambda x: x[4])
+data_dict = {}
 for d in data:
-    print(d[0], len(d[1]), d[4])
+    if d[0] in data_dict:
+        data_dict[d[0]].append(d[1:])
+    data_dict[d[0]] = [d[1:]]
+
+acc_list = []
+for filename, data in data_dict.items():
+    acc = sum([d[3] for d in data]) / len(data)
+    acc_list.append((filename, acc))
+
+acc_list = sorted(acc_list, key=lambda x: x[1])
+for acc in acc_list:
+    print(acc[0], acc[1])
+
+
+# avg of each question
+avg = [0] * 30
+l = 0
+for filename, data in data_dict.items():
+    for d in data:
+        for trial in d[1]:
+            l += 1
+            for i, t in enumerate(trial):
+                avg[i] += t
+
+avg = [(i, a / l) for i, a in enumerate(avg)]
+
+avg = sorted(avg, key=lambda x: x[1])
+for a in avg:
+    print(a[0], a[1])
+
+
+# data = sorted(data, key=lambda x: x[4])
+# for d in data:
+#    print(d[0], len(d[1]), d[4])
 
 """
 while True:
